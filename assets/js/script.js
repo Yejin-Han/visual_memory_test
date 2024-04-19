@@ -148,11 +148,7 @@ const clickAnswer = (gridItem, set) => {
           mainContainer.classList.add('anim-incorrect');
 
           setTimeout(() => {
-            if(lives > 0) {
-              reLevel();
-            } else {
-              endGame();
-            }
+            lives > 0 ? reLevel() : endGame();
           }, 800);
         }
       }
