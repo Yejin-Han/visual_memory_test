@@ -138,7 +138,7 @@ const createGridItems = (n, container) => {
 
   window.addEventListener('resize', () => {
     for(let k = 0; k < n * n; k++) {
-      updateItemSize(con, gridItem[k], n);
+      updateItemSize(container, gridItem[k], n);
     }
   });
 }
