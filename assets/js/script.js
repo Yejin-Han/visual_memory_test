@@ -11,7 +11,7 @@ const endLevelDisplay = document.querySelector('.end-level');
 
 let l = 1; // 레벨
 let lives = 3; // 목숨
-const baseTime = 3;
+const baseTime = 5; // 레벨 1 제한시간
 const slope = 1.5; // 레벨 당 시간 증가량
 
 let timerID; // 타이머 ID
@@ -47,6 +47,8 @@ btnStart.addEventListener('click', () => {
   hide(titleContainer);
   show(gameContainer);
 
+  initializeGame();
+  timeDisplay.textContent = baseTime;
   createGrid(l);
 });
 
@@ -56,29 +58,20 @@ btnHome.addEventListener('click', () => {
   initializeGame();
 });
 
-const getTimeLimit = (level) => {
-  return Math.ceil(baseTime + slope * level);
+const getTimeLimit = (level) => { // 레벨 별 제한시간. 임의로,,
+  const t = Math.ceil((baseTime - 1) + slope * (level - 1));
+  return (level >= 3) ? t : baseTime;
 }
 
-for(let r = 1; r <= 15; r++) {
-  console.log(getTimeLimit(r));
-}
-
-const startTimer = (time, set) => {
-  let remaining = time;
-
+const startTimer = (set) => {
   const timer = () => {
-    remaining--;
-    timeDisplay.textContent = remaining;
+    timeLimit--;
+    timeDisplay.textContent = timeLimit;
 
-    if(remaining > 0) {
-      timerID = setTimeout(timer, 1000);
-    } else {
+    if(timeLimit <= 0) {
       onTimeout();
-    }
-    
-    if(set.size == 0) {
-      stopTimer();
+    } else if(set.size > 0) {
+      timerID = setTimeout(timer, 1000);
     }
   }
 
@@ -87,6 +80,7 @@ const startTimer = (time, set) => {
 
 const stopTimer = () => {
   clearTimeout(timerID);
+  interactable = false;
 }
 
 const onTimeout = () => {
@@ -101,10 +95,13 @@ const createGrid = (level) => {
   const con = document.querySelector('.grid');
   con.innerHTML = '';
   levelDisplay.textContent = level;
+  timeLimit = getTimeLimit(l);
+  timeDisplay.textContent = timeLimit;
   createGridItems(n, con); // 그리드 아이템 생성
 }
 
 const createGridItems = (n, container) => {
+  answerSet.clear();
   const h = l + 2; // 정답 개수
 
   // n x n개의 item 중에 0 ~ (h-1)개의 랜덤 정답을 만듦
@@ -133,11 +130,8 @@ const createGridItems = (n, container) => {
 
   showAnswer(gridItem, answerSet);
 
-  timeLimit = getTimeLimit(l);
-  timeDisplay.textContent = timeLimit;
-
   setTimeout(() => {
-    startTimer(timeLimit, answerSet);
+    startTimer(answerSet);
   }, 1800);
 
   clickAnswer(gridItem, answerSet);
@@ -182,19 +176,16 @@ const showAnswer = (gridItem, set) => {
 }
 
 const clickAnswer = (gridItem, set) => {
-
   gridItem.forEach((item, idx) => {
     item.addEventListener('click', (e) => {
-      if(!interactable) return;
-
-      if(item.classList.contains('active') || item.classList.contains('error')) return;
+      if(!interactable || item.classList.contains('active') || item.classList.contains('error')) return;
 
       if(set.has(idx)) {
         e.target.classList.add('active');
         set.delete(idx);
 
         if(set.size === 0) {
-          interactable = false;
+          stopTimer();
 
           setTimeout(() => {
             mainContainer.classList.add('anim-correct');
@@ -206,7 +197,7 @@ const clickAnswer = (gridItem, set) => {
         errorClicked++;
 
         if(errorClicked >= 3) {
-          interactable = false;
+          stopTimer();
           lives--;
           updateLivesDisplay();
           mainContainer.classList.add('anim-incorrect');
@@ -235,18 +226,10 @@ const initializeLivesDisplay = () => {
 }
 
 const initializeLevel = () => {
-  mainContainer.classList.remove('anim-correct');
-  mainContainer.classList.remove('anim-incorrect');
+  mainContainer.classList.remove('anim-correct', 'anim-incorrect');
   interactable = false;
   errorClicked = 0;
-}
-
-const initializeGame = () => {
-  l = 1;
-  lives = 3;
-  levelDisplay.textContent = l;
-  initializeLivesDisplay();
-  initializeLevel();
+  answerSet = new Set();
 }
 
 const levelUp = () => {
@@ -265,7 +248,16 @@ const reLevel = (level) => {
 }
 
 const endGame = () => {
+  stopTimer();
   endLevelDisplay.textContent = l;
   hide(gameContainer);
   show(endingContainer);
+}
+
+const initializeGame = () => {
+  l = 1;
+  lives = 3;
+  levelDisplay.textContent = l;
+  initializeLivesDisplay();
+  initializeLevel();
 }
