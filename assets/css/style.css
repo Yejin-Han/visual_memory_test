@@ -305,6 +305,10 @@ svg:not(:root).svg-inline--fa {
     min-height: 33.75rem;
     height: 100%;
   }
+
+  .main-container .anim-slide-fade-in {
+    margin-bottom: 10vh;
+  }
   
   .title-container h1 {
     font-size: 10vw;
