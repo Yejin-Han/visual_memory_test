@@ -6,20 +6,24 @@ const btnStart = document.querySelector('.btn-start');
 const btnHome = document.querySelector('.btn-home');
 const levelDisplay = document.querySelector('.level');
 const livesDisplay = document.querySelectorAll('.lives > svg');
+const timeDisplay = document.querySelector('.time');
 const endLevelDisplay = document.querySelector('.end-level');
 
 let l = 1; // 레벨
 let lives = 3; // 목숨
+const baseTime = 3;
+const slope = 1.5; // 레벨 당 시간 증가량
+
+let timerID; // 타이머 ID
+let timeLimit = baseTime; // 제한시간
+
+let answerSet = new Set(); // 정답 세트
 
 let interactable = false; // 그리드 아이템 클릭 가능 상태 플래그
 let errorClicked = 0; // 잘못된 아이템 클릭 횟수
 
 function show(elem) {
   elem.style.display = 'block';
-}
-
-function showFlex(elem) {
-  elem.style.display = 'flex';
 }
 
 function hide(elem) {
@@ -52,15 +56,57 @@ btnHome.addEventListener('click', () => {
   initializeGame();
 });
 
+const getTimeLimit = (level) => {
+  return Math.ceil(baseTime + slope * level);
+}
+
+for(let r = 1; r <= 15; r++) {
+  console.log(getTimeLimit(r));
+}
+
+const startTimer = (time, set) => {
+  let remaining = time;
+
+  const timer = () => {
+    remaining--;
+    timeDisplay.textContent = remaining;
+
+    if(remaining > 0) {
+      timerID = setTimeout(timer, 1000);
+    } else {
+      onTimeout();
+    }
+    
+    if(set.size == 0) {
+      stopTimer();
+    }
+  }
+
+  timerID = setTimeout(timer, 1000);
+}
+
+const stopTimer = () => {
+  clearTimeout(timerID);
+}
+
+const onTimeout = () => {
+  stopTimer();
+  interactable = false;
+  mainContainer.classList.add('anim-incorrect');
+  setTimeout(endGame, 800);
+}
+
 const createGrid = (level) => {
   const n = Math.floor(Math.sqrt(9 + 3 * level)); // 그리드 개수
-  const h = level + 2; // 정답 개수
   const con = document.querySelector('.grid');
   con.innerHTML = '';
   levelDisplay.textContent = level;
+  createGridItems(n, con); // 그리드 아이템 생성
+}
 
-  let answerSet = new Set(); // 정답 세트
-  
+const createGridItems = (n, container) => {
+  const h = l + 2; // 정답 개수
+
   // n x n개의 item 중에 0 ~ (h-1)개의 랜덤 정답을 만듦
   while(answerSet.size < h) {
     const ranIdx = Math.floor(Math.random() * n * n);
@@ -74,24 +120,41 @@ const createGrid = (level) => {
 
     for(let j = 0; j < n; j++) {
       const item = document.createElement('div');
-      const itemWidth = Math.floor(con.offsetWidth / n);
-      item.style.width = itemWidth + 'px';
-      item.style.height = itemWidth + 'px';
-      item.style.borderWidth = (itemWidth * 0.0625) + 'px';
-      item.style.borderRadius = (itemWidth * 0.125) + 'px';
+      updateItemSize(container, item, n);
       item.className = 'grid-item';
       item.dataset.index = i * n + j;
       row.appendChild(item);
     }
 
-    con.appendChild(row);
+    container.appendChild(row);
   }
-
+  
   const gridItem = document.querySelectorAll('.grid-item');
 
   showAnswer(gridItem, answerSet);
 
+  timeLimit = getTimeLimit(l);
+  timeDisplay.textContent = timeLimit;
+
+  setTimeout(() => {
+    startTimer(timeLimit, answerSet);
+  }, 1800);
+
   clickAnswer(gridItem, answerSet);
+
+  window.addEventListener('resize', () => {
+    for(let k = 0; k < n * n; k++) {
+      updateItemSize(con, gridItem[k], n);
+    }
+  });
+}
+
+const updateItemSize = (con, item, n) => {
+  const itemWidth = Math.floor(con.offsetWidth / n);
+  item.style.width = itemWidth + 'px';
+  item.style.height = itemWidth + 'px';
+  item.style.borderWidth = (itemWidth * 0.0625) + 'px';
+  item.style.borderRadius = (itemWidth * 0.125) + 'px';
 }
 
 const showAnswer = (gridItem, set) => {
@@ -119,6 +182,7 @@ const showAnswer = (gridItem, set) => {
 }
 
 const clickAnswer = (gridItem, set) => {
+
   gridItem.forEach((item, idx) => {
     item.addEventListener('click', (e) => {
       if(!interactable) return;
@@ -148,7 +212,7 @@ const clickAnswer = (gridItem, set) => {
           mainContainer.classList.add('anim-incorrect');
 
           setTimeout(() => {
-            lives > 0 ? reLevel() : endGame();
+            lives > 0 ? reLevel(l) : endGame();
           }, 800);
         }
       }
@@ -175,7 +239,6 @@ const initializeLevel = () => {
   mainContainer.classList.remove('anim-incorrect');
   interactable = false;
   errorClicked = 0;
-  createGrid(l);
 }
 
 const initializeGame = () => {
@@ -189,11 +252,16 @@ const initializeGame = () => {
 const levelUp = () => {
   l++;
   initializeLevel();
+  createGrid(l);
 }
 
-const reLevel = () => {
-  mainContainer.classList.remove('anim-incorrect');
+const reLevel = (level) => {
+  stopTimer();
   initializeLevel();
+  const n = Math.floor(Math.sqrt(9 + 3 * level));
+  const con = document.querySelector('.grid');
+  con.innerHTML = '';
+  createGridItems(n, con); // 그리드 아이템 재생성
 }
 
 const endGame = () => {
