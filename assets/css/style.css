@@ -323,7 +323,7 @@ svg:not(:root).svg-inline--fa {
 }
 
 @media (max-width: 480px) {
-  html, body {
+  html {
     font-size: 12px;
   }
 }
